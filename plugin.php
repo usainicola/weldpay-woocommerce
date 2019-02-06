@@ -66,6 +66,8 @@ function weldpay_init_gateway_class() {
     public function process_payment( $order_id ) {
       global $woocommerce;
       $order = new WC_Order( $order_id );
+      $nonce = substr(str_shuffle(MD5(microtime())), 0, 12);
+      wc_add_order_item_meta($order_id,'ipn_nonce',$nonce);
       $items = $order->get_items();
       $weldpay_items = array();
       $weldpay_item = array();
@@ -100,7 +102,7 @@ function weldpay_init_gateway_class() {
         ],
         \"SuccessUrl\": \"".$this->get_return_url( $order )."\",
         \"CancelUrl\": \"".wc_get_cart_url()."\",
-        \"ServerNotificationUrl\": \"".get_bloginfo('url')."/wc-api/weldpay_webhook/?order_id=".$order_id."\"
+        \"ServerNotificationUrl\": \"".get_bloginfo('url')."/wc-api/weldpay_webhook/?nonce=".$nonce."&order_id=".$order_id."\"
       }");
       curl_setopt($ch, CURLOPT_HTTPHEADER, array(
         "Content-Type: application/json",
@@ -114,7 +116,11 @@ function weldpay_init_gateway_class() {
       );
     }
     public function webhook() {
-      $order_id = isset($_GET['order_id']) ? $_GET['order_id'] : null;
+      $order_id = isset($_REQUEST['order_id']) ? $_REQUEST['order_id'] : null;
+      $nonce = isset($_REQUEST['nonce']) ? $_REQUEST['nonce'] : null;
+      if (is_null($order_id)) return;
+      if (is_null($nonce)) return;
+      if (wc_get_order_item_meta($order_id,'ipn_nonce')!=$nonce) return;
       $order = wc_get_order( $order_id );
       $order->payment_complete();
       wc_reduce_stock_levels($order_id);
