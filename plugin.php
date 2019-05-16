@@ -116,6 +116,7 @@ function weldpay_init_gateway_class() {
       );
     }
     public function webhook() {
+      header( 'HTTP/1.1 200 OK' );
       $order_id = isset($_REQUEST['order_id']) ? $_REQUEST['order_id'] : null;
       $nonce = isset($_REQUEST['nonce']) ? $_REQUEST['nonce'] : null;
       if (is_null($order_id)) return;
